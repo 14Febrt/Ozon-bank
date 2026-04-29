@@ -31,11 +31,8 @@ jobs:
       - name: Pub get
         run: flutter pub get
 
-      - name: Pod install
-        working-directory: ios
-        run: |
-          pod repo update
-          pod install
+      - name: Precache iOS artifacts
+        run: flutter precache --ios
 
       - name: Build iOS (no codesign)
         run: flutter build ios --release --no-codesign
