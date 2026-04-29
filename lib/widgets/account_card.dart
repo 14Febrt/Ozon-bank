@@ -1,9 +1,57 @@
 import 'package:flutter/material.dart';
 
+import '../state/balance.dart';
 import '../theme.dart';
 
 class AccountCard extends StatelessWidget {
   const AccountCard({super.key});
+
+  Future<void> _showTopUpDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    final amount = await showDialog<double>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text('Пополнение',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(
+            hintText: 'Сумма, ₽',
+            hintStyle: TextStyle(color: AppColors.textTertiary),
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: AppColors.cardChip)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: AppColors.accentBlue)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Отмена',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              final raw = controller.text.replaceAll(',', '.').trim();
+              final v = double.tryParse(raw);
+              Navigator.pop(ctx, v);
+            },
+            child: const Text('Пополнить',
+                style: TextStyle(color: AppColors.accentBlue)),
+          ),
+        ],
+      ),
+    );
+    if (amount != null && amount > 0) topUp(amount);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,12 +69,19 @@ class AccountCard extends StatelessWidget {
             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 4),
-          const Text(
-            '7,04 ₽',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onLongPress: () => _showTopUpDialog(context),
+            child: ValueListenableBuilder<double>(
+              valueListenable: balanceNotifier,
+              builder: (_, value, __) => Text(
+                formatRub(value),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 14),

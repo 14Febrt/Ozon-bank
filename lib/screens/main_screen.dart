@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import 'home_screen.dart';
+import 'payments_screen.dart';
 import 'placeholder_screens.dart';
 
 class MainScreen extends StatefulWidget {

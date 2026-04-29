@@ -39,13 +39,6 @@ class _Stub extends StatelessWidget {
   }
 }
 
-class PaymentsScreen extends StatelessWidget {
-  const PaymentsScreen({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      const _Stub(title: 'Платежи', icon: Icons.compare_arrows_rounded);
-}
-
 class BenefitsScreen extends StatelessWidget {
   const BenefitsScreen({super.key});
   @override

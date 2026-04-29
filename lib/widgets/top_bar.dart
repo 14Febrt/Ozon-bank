@@ -11,25 +11,6 @@ class TopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
         children: [
-          // ozon банк pill
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.ozonBlue,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'ozon банк',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
               CircleAvatar(
