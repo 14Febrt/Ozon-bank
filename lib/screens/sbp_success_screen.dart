@@ -60,19 +60,28 @@ class _SbpSuccessScreenState extends State<SbpSuccessScreen>
     final tint = _bankTint(widget.bank.kind);
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0, -0.5),
-            radius: 1.2,
-            colors: [
-              tint.withOpacity(0.55),
-              const Color(0xFF071119),
-              Colors.black,
-            ],
-            stops: const [0.0, 0.55, 1.0],
-          ),
-        ),
+      body: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (_, child) {
+          // Фон проявляется вместе с надрывом: от еле заметного к яркому.
+          final t = Curves.easeOutCubic.transform(_ctrl.value);
+          final opacity = 0.05 + 0.55 * t;
+          return Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, -0.5),
+                radius: 1.2,
+                colors: [
+                  tint.withOpacity(opacity),
+                  const Color(0xFF071119),
+                  Colors.black,
+                ],
+                stops: const [0.0, 0.55, 1.0],
+              ),
+            ),
+            child: child,
+          );
+        },
         child: SafeArea(
           child: Column(
             children: [
@@ -139,21 +148,27 @@ class _SbpSuccessScreenState extends State<SbpSuccessScreen>
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       child: Row(
         children: [
-          // SBP logo (gradient circle)
-          Container(
+          // SBP logo: real PNG with gradient-circle fallback
+          SizedBox(
             width: 28,
             height: 28,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF4285F4),
-                  Color(0xFF34A853),
-                  Color(0xFFFBBC05),
-                  Color(0xFFEA4335),
-                ],
+            child: Image.asset(
+              'assets/sbp/sbp.png',
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF4285F4),
+                      Color(0xFF34A853),
+                      Color(0xFFFBBC05),
+                      Color(0xFFEA4335),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -229,7 +244,7 @@ class _Receipt extends StatelessWidget {
         final opacity = entry.value;
         final scale = 0.94 + 0.06 * entry.value;
         final t = tear.value.clamp(0.0, 1.0);
-        final gapH = 2 + t * 18; // 2 → 20 px (растёт зазор)
+        final gapH = t * 14; // 0 → 14 px (растёт зазор)
         // Низ "отрывается" — наклоняется и сползает вниз.
         // Ось по левому краю → правый бок отходит сильнее.
         final tilt = t * 0.025;
@@ -243,16 +258,19 @@ class _Receipt extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Column(
                 children: [
-                  _topHalf(),
-                  _perforation(gapH),
+                  // Верхняя половина "отрывается" — едет вверх и
+                  // наклоняется. Ось вращения — левый нижний угол.
                   Transform.translate(
-                    offset: Offset(0, dropY),
+                    offset: Offset(0, -dropY),
                     child: Transform.rotate(
-                      angle: tilt,
-                      alignment: Alignment.centerLeft,
-                      child: _bottomHalf(),
+                      angle: -tilt,
+                      alignment: Alignment.bottomLeft,
+                      child: _topHalf(),
                     ),
                   ),
+                  _perforation(gapH),
+                  // Нижняя половина стоит ровно.
+                  _bottomHalf(),
                 ],
               ),
             ),
@@ -263,67 +281,84 @@ class _Receipt extends StatelessWidget {
   }
 
   Widget _topHalf() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 18),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1B2129),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(top: 32),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1B2129),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
             children: [
-              BankLogo(kind: bankKind, size: 64),
-              Positioned(
-                right: -2,
-                bottom: -2,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF21BA72),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: const Color(0xFF1B2129), width: 2),
-                  ),
-                  child: const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 14),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 50, 20, 22),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Успешно',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '− ${formatRubSmart(amount)}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              // Пунктир — часть верхней половины чека, видна на нижней кромке.
+              const Padding(
+                padding: EdgeInsets.fromLTRB(14, 0, 14, 8),
+                child: _DashedLine(),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          const Text(
-            'Успешно',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
+        ),
+        // Floating bank logo with green check, half above the card.
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            BankLogo(kind: bankKind, size: 64),
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF21BA72),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: const Color(0xFF1B2129), width: 2),
+                ),
+                child: const Icon(Icons.check_rounded,
+                    color: Colors.white, size: 14),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '− ${formatRubSmart(amount)}',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 
   Widget _bottomHalf() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: const BoxDecoration(
         color: Color(0xFF1B2129),
         borderRadius: BorderRadius.only(
@@ -333,34 +368,46 @@ class _Receipt extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.cardChip,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              bankName,
-              style: const TextStyle(
-                  color: AppColors.textPrimary, fontSize: 14),
-            ),
+          // Пунктир — часть нижней половины, видна на верхней кромке.
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: _DashedLine(),
           ),
-          const SizedBox(height: 12),
-          Text(
-            recipientName,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            phone,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardChip,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    bankName,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary, fontSize: 14),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  recipientName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  phone,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -369,53 +416,8 @@ class _Receipt extends StatelessWidget {
   }
 
   Widget _perforation(double height) {
-    return Container(
-      height: height,
-      color: Colors.transparent,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // notches on sides (overlap card edges)
-          Positioned(
-            left: -11,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF071119),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -11,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF071119),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-          // dashed line band (drawn as full ribbon dark, with dashes painted)
-          Positioned.fill(
-            child: Container(
-              color: const Color(0xFF1B2129),
-              child: const _DashedLine(),
-            ),
-          ),
-        ],
-      ),
-    );
+    // Прозрачный зазор — пунктир теперь часть самих половинок.
+    return SizedBox(height: height, width: double.infinity);
   }
 }
 
@@ -424,30 +426,34 @@ class _DashedLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (_, c) {
-        const dash = 4.0;
-        const gap = 4.0;
-        final count = (c.maxWidth / (dash + gap)).floor();
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(
-                count,
-                (_) => Container(
-                  width: dash,
-                  height: 1.2,
-                  color: AppColors.textTertiary.withOpacity(0.6),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    return SizedBox(
+      height: 2,
+      width: double.infinity,
+      child: CustomPaint(painter: _DashPainter()),
     );
   }
+}
+
+class _DashPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const dash = 5.0;
+    const gap = 5.0;
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.45)
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    final cy = size.height / 2;
+    double x = 0;
+    while (x < size.width) {
+      final end = (x + dash).clamp(0.0, size.width);
+      canvas.drawLine(Offset(x, cy), Offset(end, cy), paint);
+      x += dash + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
 // ===================== Action row =====================
@@ -467,8 +473,9 @@ class _ActionsRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: _items.map((a) => _ActionTile(a: a)).toList(),
+        children: _items
+            .map<Widget>((a) => Expanded(child: _ActionTile(a: a)))
+            .toList(),
       ),
     );
   }
@@ -486,27 +493,27 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 64,
-      child: Column(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(a.icon, color: Colors.white, size: 22),
+    return Column(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(14),
           ),
-          const SizedBox(height: 6),
-          Text(
-            a.label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-          ),
-        ],
-      ),
+          child: Icon(a.icon, color: Colors.white, size: 22),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          a.label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.visible,
+          softWrap: false,
+          style: const TextStyle(color: Colors.white, fontSize: 11),
+        ),
+      ],
     );
   }
 }

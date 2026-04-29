@@ -44,6 +44,25 @@ class SelectBankScreen extends StatelessWidget {
     if (result == null || result.amount <= 0) return;
     if (!context.mounted) return;
     withdraw(result.amount);
+    // Маленькая задержка — "перевод обрабатывается".
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.55),
+      builder: (_) => const Center(
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: CircularProgressIndicator(
+            strokeWidth: 3,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // close loader
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => SbpSuccessScreen(
