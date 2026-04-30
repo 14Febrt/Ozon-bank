@@ -242,24 +242,10 @@ class _PhoneInput extends StatelessWidget {
           const Icon(Icons.qr_code_2_rounded,
               color: AppColors.textSecondary, size: 22),
           const SizedBox(width: 10),
-          Container(
+          SizedBox(
             width: 22,
             height: 22,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF4285F4),
-                  Color(0xFF34A853),
-                  Color(0xFFFBBC05),
-                  Color(0xFFEA4335),
-                ],
-              ),
-            ),
-            child: const Icon(Icons.payment_rounded,
-                color: Colors.white, size: 14),
+            child: Image.asset('assets/sbp/sbp.png', fit: BoxFit.contain),
           ),
         ],
       ),
@@ -728,11 +714,10 @@ class _OtherTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (iconGradient != null)
-            Container(
+            SizedBox(
               width: 22,
               height: 22,
-              decoration:
-                  BoxDecoration(shape: BoxShape.circle, gradient: iconGradient),
+              child: Image.asset('assets/sbp/sbp.png', fit: BoxFit.contain),
             )
           else
             Icon(icon, color: AppColors.accentBlue, size: 24),

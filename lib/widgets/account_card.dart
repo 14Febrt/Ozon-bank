@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../state/balance.dart';
+import '../state/operations.dart';
 import '../theme.dart';
 
 class AccountCard extends StatelessWidget {
@@ -50,7 +51,16 @@ class AccountCard extends StatelessWidget {
         ],
       ),
     );
-    if (amount != null && amount > 0) topUp(amount);
+    if (amount != null && amount > 0) {
+      topUp(amount);
+      addOperation(BankOperation(
+        title: 'OzonATM',
+        subtitle: 'Финансовые услуги',
+        amount: amount,
+        date: DateTime.now(),
+        kind: OpKind.atm,
+      ));
+    }
   }
 
   @override
@@ -75,7 +85,7 @@ class AccountCard extends StatelessWidget {
             child: ValueListenableBuilder<double>(
               valueListenable: balanceNotifier,
               builder: (_, value, __) => Text(
-                formatRub(value),
+                formatRubSmart(value),
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 28,

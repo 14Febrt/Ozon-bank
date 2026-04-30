@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../state/balance.dart';
+import '../state/operations.dart';
 import '../theme.dart';
 import 'recipients_screen.dart';
 import 'sbp_success_screen.dart';
@@ -18,6 +19,575 @@ class _TransferInput {
   final double amount;
   final String? name;
   const _TransferInput({required this.amount, this.name});
+}
+
+class PhoneTransferScreen extends StatefulWidget {
+  final BankInfo bank;
+  final Contact contact;
+  const PhoneTransferScreen({
+    super.key,
+    required this.bank,
+    required this.contact,
+  });
+
+  @override
+  State<PhoneTransferScreen> createState() => _PhoneTransferScreenState();
+}
+
+class _PhoneTransferScreenState extends State<PhoneTransferScreen> {
+  final _amountCtrl = TextEditingController();
+  final _msgCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _msgCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final raw = _amountCtrl.text.replaceAll(',', '.').trim();
+    final v = double.tryParse(raw);
+    if (v == null || v <= 0) return;
+    final msg = _msgCtrl.text.trim().isEmpty ? null : _msgCtrl.text.trim();
+    final ok = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ConfirmTransferScreen(
+          bank: widget.bank,
+          contact: widget.contact,
+          amount: v,
+          message: msg,
+        ),
+      ),
+    );
+    if (ok != true) return;
+    if (!mounted) return;
+    Navigator.pop(context, _TransferInput(amount: v, name: msg));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.bgTop, AppColors.bgBottom],
+            stops: [0.0, 0.4],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _appBar(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _SectionLabel('СЧЁТ СПИСАНИЯ'),
+                      const SizedBox(height: 8),
+                      _accountCard(),
+                      const SizedBox(height: 18),
+                      const _SectionLabel('ПОЛУЧАТЕЛЬ'),
+                      const SizedBox(height: 8),
+                      _recipientCard(),
+                      const SizedBox(height: 12),
+                      _amountField(),
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(14, 4, 14, 0),
+                        child: Text(
+                          'Без комиссии',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _messageField(),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  MediaQuery.of(context).viewInsets.bottom + 12,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    onPressed: _submit,
+                    child: const Text(
+                      'Продолжить',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _appBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textPrimary, size: 20),
+          ),
+          const Expanded(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.only(right: 40),
+                child: Text(
+                  'По номеру телефона',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _accountCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Основной счёт',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ValueListenableBuilder<double>(
+            valueListenable: balanceNotifier,
+            builder: (_, value, __) => Text(
+              formatRubSmart(value),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _recipientCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          BankLogo(kind: widget.bank.kind, size: 44),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.contact.phone,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.textSecondary, size: 22),
+        ],
+      ),
+    );
+  }
+
+  Widget _amountField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TextField(
+        controller: _amountCtrl,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+        ],
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 16,
+        ),
+        decoration: const InputDecoration(
+          hintText: 'Сумма до 600 000 ₽',
+          hintStyle:
+              TextStyle(color: AppColors.textTertiary, fontSize: 15),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _messageField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TextField(
+        controller: _msgCtrl,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 16,
+        ),
+        decoration: const InputDecoration(
+          hintText: 'Сообщение получателю',
+          hintStyle:
+              TextStyle(color: AppColors.textTertiary, fontSize: 15),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+}
+
+class ConfirmTransferScreen extends StatelessWidget {
+  final BankInfo bank;
+  final Contact contact;
+  final double amount;
+  final String? message;
+
+  const ConfirmTransferScreen({
+    super.key,
+    required this.bank,
+    required this.contact,
+    required this.amount,
+    this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasName = message != null && message!.isNotEmpty;
+    final headline = hasName ? message! : contact.phone;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.bgTop, AppColors.bgBottom],
+            stops: [0.0, 0.4],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: AppColors.textPrimary, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Подтвердите перевод',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _card(
+                        headline: headline,
+                        showPhone: hasName,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(
+                      'Перевести ${formatRubSmart(amount)}',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12, top: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: Image.asset('assets/sbp/sbp.png',
+                          fit: BoxFit.contain),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Система быстрых платежей',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _card({required String headline, required bool showPhone}) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      decoration: BoxDecoration(
+        color: AppColors.cardSoft,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headline,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (showPhone) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            contact.phone,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.edit_outlined,
+                              color: AppColors.textSecondary, size: 14),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              BankLogo(kind: bank.kind, size: 44),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(height: 0.5, color: AppColors.cardChip),
+          const SizedBox(height: 14),
+          _kv('Банк получателя', bank.name),
+          const SizedBox(height: 14),
+          _kvBalance(),
+          const SizedBox(height: 14),
+          _kvAmount(),
+        ],
+      ),
+    );
+  }
+
+  Widget _kv(String k, String v) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          k,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          v,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _kvBalance() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Счёт списания',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'Основной счёт',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        ValueListenableBuilder<double>(
+          valueListenable: balanceNotifier,
+          builder: (_, value, __) => Text(
+            formatRubSmart(value),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _kvAmount() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Сумма списания',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          formatRubSmart(amount),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'Без комиссии',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 12,
+          letterSpacing: 0.5,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
 }
 
 class SelectBankScreen extends StatelessWidget {
@@ -40,10 +610,23 @@ class SelectBankScreen extends StatelessWidget {
   }
 
   Future<void> _pickBank(BuildContext context, BankInfo bank) async {
-    final result = await _askAmount(context);
+    final result = await Navigator.of(context).push<_TransferInput>(
+      MaterialPageRoute(
+        builder: (_) => PhoneTransferScreen(bank: bank, contact: contact),
+      ),
+    );
     if (result == null || result.amount <= 0) return;
     if (!context.mounted) return;
     withdraw(result.amount);
+    addOperation(BankOperation(
+      title: (result.name != null && result.name!.isNotEmpty)
+          ? result.name!
+          : contact.phone,
+      subtitle: 'Переводы · ${bank.name}',
+      amount: -result.amount,
+      date: DateTime.now(),
+      kind: OpKind.transfer,
+    ));
     // Маленькая задержка — "перевод обрабатывается".
     showDialog<void>(
       context: context,
@@ -72,134 +655,6 @@ class SelectBankScreen extends StatelessWidget {
           customName: result.name,
         ),
       ),
-    );
-  }
-
-  Future<_TransferInput?> _askAmount(BuildContext context) async {
-    final amountCtrl = TextEditingController();
-    final nameCtrl = TextEditingController();
-    return showModalBottomSheet<_TransferInput>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 16,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardChip,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Сумма перевода',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: amountCtrl,
-                autofocus: true,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ],
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                ),
-                decoration: const InputDecoration(
-                  hintText: '0 ₽',
-                  hintStyle: TextStyle(
-                    color: AppColors.textTertiary,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  border: InputBorder.none,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(height: 0.5, color: AppColors.cardChip),
-              const SizedBox(height: 14),
-              TextField(
-                controller: nameCtrl,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Имя или сообщение получателю (необязательно)',
-                  hintStyle: const TextStyle(
-                      color: AppColors.textTertiary, fontSize: 14),
-                  filled: true,
-                  fillColor: AppColors.cardSoft,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentBlue,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  onPressed: () {
-                    final raw =
-                        amountCtrl.text.replaceAll(',', '.').trim();
-                    final v = double.tryParse(raw);
-                    if (v == null) return;
-                    Navigator.pop(
-                      ctx,
-                      _TransferInput(
-                        amount: v,
-                        name: nameCtrl.text.trim().isEmpty
-                            ? null
-                            : nameCtrl.text.trim(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Перевести',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -368,22 +823,10 @@ class _LimitCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: 28,
             height: 28,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF4285F4),
-                  Color(0xFF34A853),
-                  Color(0xFFFBBC05),
-                  Color(0xFFEA4335),
-                ],
-              ),
-            ),
+            child: Image.asset('assets/sbp/sbp.png', fit: BoxFit.contain),
           ),
           const SizedBox(width: 12),
           const Expanded(

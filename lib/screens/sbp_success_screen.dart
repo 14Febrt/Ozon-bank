@@ -46,9 +46,7 @@ class _SbpSuccessScreenState extends State<SbpSuccessScreen>
     if (widget.customName != null && widget.customName!.isNotEmpty) {
       return widget.customName!;
     }
-    final parts = widget.contact.name.split(' ');
-    if (parts.length > 1) return '${parts[0]} ${parts[1][0]}.';
-    return widget.contact.name;
+    return '';
   }
 
   void _close() {
@@ -65,18 +63,18 @@ class _SbpSuccessScreenState extends State<SbpSuccessScreen>
         builder: (_, child) {
           // Фон проявляется вместе с надрывом: от еле заметного к яркому.
           final t = Curves.easeOutCubic.transform(_ctrl.value);
-          final opacity = 0.05 + 0.55 * t;
+          final opacity = 0.25 + 0.7 * t;
           return Container(
             decoration: BoxDecoration(
               gradient: RadialGradient(
-                center: const Alignment(0, -0.5),
-                radius: 1.2,
+                center: const Alignment(0, -0.45),
+                radius: 1.1,
                 colors: [
                   tint.withOpacity(opacity),
-                  const Color(0xFF071119),
+                  const Color(0xFF0A1622),
                   Colors.black,
                 ],
-                stops: const [0.0, 0.55, 1.0],
+                stops: const [0.0, 0.6, 1.0],
               ),
             ),
             child: child,
@@ -131,15 +129,15 @@ class _SbpSuccessScreenState extends State<SbpSuccessScreen>
   Color _bankTint(BankKind k) {
     switch (k) {
       case BankKind.sber:
-        return const Color(0xFF1A6B47);
+        return const Color(0xFF1FB36A);
       case BankKind.tbank:
-        return const Color(0xFF8A6E00);
+        return const Color(0xFFE0B400);
       case BankKind.ozon:
-        return const Color(0xFF1A3F8E);
+        return const Color(0xFF2D6BFF);
       case BankKind.alfa:
-        return const Color(0xFF7A1E18);
+        return const Color(0xFFE0382F);
       case BankKind.other:
-        return const Color(0xFF1F3556);
+        return const Color(0xFF4B6EC9);
     }
   }
 
@@ -179,9 +177,9 @@ class _SbpSuccessScreenState extends State<SbpSuccessScreen>
                 child: Text(
                   'Система быстрых платежей',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ),
@@ -244,22 +242,18 @@ class _Receipt extends StatelessWidget {
         final opacity = entry.value;
         final scale = 0.94 + 0.06 * entry.value;
         final t = tear.value.clamp(0.0, 1.0);
-        final gapH = t * 14; // 0 → 14 px (растёт зазор)
-        // Низ "отрывается" — наклоняется и сползает вниз.
-        // Ось по левому краю → правый бок отходит сильнее.
-        final tilt = t * 0.025;
-        final dropY = t * 6.0;
+        final gapH = t * 10;
+        final tilt = t * 0.015;
+        final dropY = t * 4.0;
 
         return Opacity(
           opacity: opacity,
           child: Transform.scale(
             scale: scale,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 children: [
-                  // Верхняя половина "отрывается" — едет вверх и
-                  // наклоняется. Ось вращения — левый нижний угол.
                   Transform.translate(
                     offset: Offset(0, -dropY),
                     child: Transform.rotate(
@@ -268,8 +262,7 @@ class _Receipt extends StatelessWidget {
                       child: _topHalf(),
                     ),
                   ),
-                  _perforation(gapH),
-                  // Нижняя половина стоит ровно.
+                  SizedBox(height: gapH),
                   _bottomHalf(),
                 ],
               ),
@@ -287,7 +280,7 @@ class _Receipt extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          margin: const EdgeInsets.only(top: 32),
+          margin: const EdgeInsets.only(top: 28),
           decoration: const BoxDecoration(
             color: Color(0xFF1B2129),
             borderRadius: BorderRadius.only(
@@ -298,30 +291,29 @@ class _Receipt extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 50, 20, 22),
+                padding: const EdgeInsets.fromLTRB(16, 42, 16, 16),
                 child: Column(
                   children: [
                     const Text(
                       'Успешно',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       '− ${formatRubSmart(amount)}',
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Пунктир — часть верхней половины чека, видна на нижней кромке.
               const Padding(
                 padding: EdgeInsets.fromLTRB(14, 0, 14, 8),
                 child: _DashedLine(),
@@ -333,7 +325,7 @@ class _Receipt extends StatelessWidget {
         Stack(
           clipBehavior: Clip.none,
           children: [
-            BankLogo(kind: bankKind, size: 64),
+            BankLogo(kind: bankKind, size: 56),
             Positioned(
               right: -2,
               bottom: -2,
@@ -368,43 +360,38 @@ class _Receipt extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Пунктир — часть нижней половины, видна на верхней кромке.
           const Padding(
             padding: EdgeInsets.fromLTRB(14, 8, 14, 0),
             child: _DashedLine(),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
             child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardChip,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    bankName,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary, fontSize: 14),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 Text(
-                  recipientName,
+                  bankName,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
+                if (recipientName.isNotEmpty) ...[
+                  Text(
+                    recipientName,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 Text(
                   phone,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
               ],
@@ -415,10 +402,6 @@ class _Receipt extends StatelessWidget {
     );
   }
 
-  Widget _perforation(double height) {
-    // Прозрачный зазор — пунктир теперь часть самих половинок.
-    return SizedBox(height: height, width: double.infinity);
-  }
 }
 
 class _DashedLine extends StatelessWidget {
@@ -440,8 +423,8 @@ class _DashPainter extends CustomPainter {
     const dash = 5.0;
     const gap = 5.0;
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.45)
-      ..strokeWidth = 1.4
+      ..color = Colors.white.withOpacity(0.25)
+      ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
     final cy = size.height / 2;
     double x = 0;
@@ -455,7 +438,6 @@ class _DashPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
-
 // ===================== Action row =====================
 class _ActionsRow extends StatelessWidget {
   const _ActionsRow();
@@ -499,10 +481,10 @@ class _ActionTile extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(14),
+            color: const Color(0xFF152634),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(a.icon, color: Colors.white, size: 22),
+          child: Icon(a.icon, color: AppColors.accentBlue, size: 22),
         ),
         const SizedBox(height: 6),
         Text(
