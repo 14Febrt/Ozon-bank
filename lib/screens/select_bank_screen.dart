@@ -39,6 +39,17 @@ class _PhoneTransferScreenState extends State<PhoneTransferScreen> {
   final _msgCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Если контакт из списка — подставляем его имя в поле "сообщение".
+    // Виртуальный контакт ручного ввода телефона имеет имя 'Новый получатель' — его не подставляем.
+    final name = widget.contact.name.trim();
+    if (name.isNotEmpty && name != 'Новый получатель') {
+      _msgCtrl.text = name;
+    }
+  }
+
+  @override
   void dispose() {
     _amountCtrl.dispose();
     _msgCtrl.dispose();

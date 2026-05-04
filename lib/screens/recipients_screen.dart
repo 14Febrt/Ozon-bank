@@ -27,6 +27,7 @@ const List<Contact> kContacts = [
     heartsInName: 3,
     heartBadge: true,
   ),
+  Contact(initials: 'РП', name: 'Рубен Самвелович П.', phone: '+7 (988) 995-00-29'),
   Contact(initials: 'Н', name: 'Некит', phone: '+7 (952) 416-70-94'),
   Contact(
       initials: 'АИ',
