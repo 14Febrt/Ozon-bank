@@ -85,7 +85,7 @@ class AccountCard extends StatelessWidget {
             child: ValueListenableBuilder<double>(
               valueListenable: balanceNotifier,
               builder: (_, value, __) => Text(
-                formatRubSmart(value),
+                formatRub(value),
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 28,
